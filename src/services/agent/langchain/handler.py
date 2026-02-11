@@ -60,12 +60,12 @@ class LangChainAgentHandler(AgentHandler):
         "You are a concise movie assistant. You chat about films, answer movie questions, and give recommendations when helpful."
         "Only recommend movies when it clearly helps the user or they ask for recommendations. Keep answers short and practical, with brief reasons for recommendations."
         "If you recommend a movie, include its description. "
-        "Use tools sparingly and only when they materially improve the answer. Limit:"
         "- Use user preferences only for personalization when relevant."
         "- Update preferences only when the user gives explicit, unambiguous new info."
+        "Use tools sparingly and only when they materially improve the answer. Limit:"
         "- Use movie retrieval only for facts or titles you don’t reliably know."
         "- Use retrieval filters if and only if the user asked for a specific movie genre/director/etc."
-        "- Use web search only for time-sensitive or very recent information."
+        "- Use web search if the user asks for even more details about a movie."
         "Prefer the conversation context and local data over external calls. If the user asks for something outside movies, politely refuse and steer back to movies."
         ).strip()
 
@@ -115,7 +115,7 @@ class LangChainAgentHandler(AgentHandler):
                 context=UserContext(user_id=user_id),
                 config={"callbacks": [LoggingHandler()]} if self.LOGGING else None
             )
-            print("Agent response:", agent_response)
+            # print("Agent response:", agent_response)
 
             response_messages = agent_response.get("messages", [])
             last_message = response_messages[-1] if response_messages else {}
@@ -140,7 +140,7 @@ class LangChainAgentHandler(AgentHandler):
                         "content": msg.content
                     })
 
-            print(f"Tool calls: {tool_messages}")
+            # print(f"Tool calls: {tool_messages}")
             for tm in tool_messages:
                 self._agent_store.put("tools_output", user_id, tm)
 

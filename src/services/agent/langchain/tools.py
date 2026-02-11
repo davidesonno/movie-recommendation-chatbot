@@ -82,6 +82,8 @@ movie_vectorstore = get_movies_db_handler(
     "recommend_movies",
     description=(
         "Retrieve movies with query:str and OPTIONAL filters:dict. The filters are in OR. "
+        "Do not query 'films like [x]', 'action'. "
+        "Query using topics not genres or titles. "
         "ONLY use the filters if user asked for them. "
         "Available filters are genres (string), director (string), year (int or range), themes (string), title (string or {'$nin': [...]}) for exclusion. "
     ).strip()
