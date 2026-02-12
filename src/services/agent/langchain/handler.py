@@ -104,6 +104,7 @@ class LangChainAgentHandler(AgentHandler):
             if not history:
                 raise ValueError("History cannot be empty")
             
+            # TODO maybe prepend to the histroy instead of appending
             prev_tool_outputs = self._agent_store.get("tools_output", user_id) or []
             if prev_tool_outputs:
                 tool_output_summary = "\n".join([f"{i+1}. {to['tool_name']}: {to['content']}" for i, to in enumerate(prev_tool_outputs)])
