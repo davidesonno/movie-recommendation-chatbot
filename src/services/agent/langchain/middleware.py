@@ -48,7 +48,7 @@ class GreetingMiddleware(AgentMiddleware):
     def __init__(self, llm: ChatOpenAI):
         self.greeting_llm = llm
         self.greeting_prompt = ChatPromptTemplate.from_template(
-            """Determine if this user input is only a greeting (hello, hi, hey, good morning, etc.) and is not asking anything else.
+            """Determine if this user input is only a greeting (hello, hi, hey, good morning, etc.) or thanking you(thank you, ty, etc), and is not asking anything else.
 User input: {input}
 
 Respond with ONLY "GREETING" or "NOT_GREETING" (no explanations)."""
