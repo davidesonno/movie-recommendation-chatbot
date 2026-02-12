@@ -62,6 +62,8 @@ class LangChainAgentHandler(AgentHandler):
         "If you recommend a movie, include its description. "
         "- Use user preferences only for personalization when relevant."
         "- Update preferences only when the user gives explicit, unambiguous new info."
+        "- If the user has watched a film, place it in the watched_films. "
+        "- If the user shows interest in a film, place it in interested_films. "
         "Use tools sparingly and only when they materially improve the answer. Limit:"
         "- Use movie retrieval only for facts or titles you don’t reliably know."
         "- Use retrieval filters if and only if the user asked for a specific movie genre/director/etc."
