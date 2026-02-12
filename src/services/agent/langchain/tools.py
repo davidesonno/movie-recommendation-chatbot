@@ -88,14 +88,6 @@ movie_vectorstore = get_movies_db_handler(
 )
 def recomend_movies(query: str, filters: Optional[Dict[str, Any]] = None, runtime: ToolRuntime[UserContext] = None) -> str:
     def prepare_filters(filters: Optional[Dict[str, Any]], watched: Optional[set] = None):
-        """
-        Prepare Chroma-compatible filter:
-        - Clean empty filters
-        - Wrap scalar values into $in lists
-        - Combine field filters with $or
-        - AND them with watched exclusion ($nin)
-        """
-
         or_conditions = []
         if filters:
             for field, condition in filters.items():
@@ -110,10 +102,11 @@ def recomend_movies(query: str, filters: Optional[Dict[str, Any]] = None, runtim
                         or_conditions.append({field: condition})
                 elif isinstance(condition, list):
                     if condition:
-                        or_conditions.append({field: {"$in": condition}})
+                        for c in condition:
+                            or_conditions.append({field: {"$contains": c}})
                 else:
                     # scalar -> wrap in $in
-                    or_conditions.append({field: {"$in": [condition]}})
+                    or_conditions.append({field: {"$contains": condition}})
 
         and_conditions = []
 
@@ -126,7 +119,8 @@ def recomend_movies(query: str, filters: Optional[Dict[str, Any]] = None, runtim
 
         # Add watched exclusion
         if watched:
-            and_conditions.append({"title": {"$nin": list(watched)}})
+            for film in watched:
+                and_conditions.append({"title": {"$ne": film}})
 
         if not and_conditions:
             return None
@@ -147,14 +141,14 @@ def recomend_movies(query: str, filters: Optional[Dict[str, Any]] = None, runtim
     interested = set(preferences.get("interested_films", []))
 
     # check the query, because the agent might search for "fantasy films" and so on but that info is in the genre
-    if len(query.split()) <= 5: # 5 = "short phrase"
-        genres = filters.get("genres", "")
-        if isinstance(genres, str):
-            genres = [genres]
-        for genre in genres:
-            if genre.lower() in query.lower():
-                # query = query.replace(genre, "").strip() # remove genre from query. If we are here the query is likely: "fantasy films" and so on, so "films" alone is useless
-                query = "" # empty the whole query
+    # if len(query.split()) <= 5: # 5 = "short phrase"
+    #     genres = filters.get("genres", "")
+    #     if isinstance(genres, str):
+    #         genres = [genres]
+    #     for genre in genres:
+    #         if genre.lower() in query.lower():
+    #             # query = query.replace(genre, "").strip() # remove genre from query. If we are here the query is likely: "fantasy films" and so on, so "films" alone is useless
+    #             query = "" # empty the whole query
 
     # sanitize agent filters and add watched films
     prepared_filters = prepare_filters(filters, watched)

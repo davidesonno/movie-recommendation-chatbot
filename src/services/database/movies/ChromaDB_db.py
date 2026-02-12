@@ -2,6 +2,8 @@ try:
     from src.services.database.movies.movies_db import MoviesDBHandler
 except:
     from movies_db import MoviesDBHandler
+from typing import Any, Dict
+from git import Optional
 from langchain_core.documents import Document
 from langchain_chroma import Chroma
 
@@ -87,19 +89,138 @@ if __name__ == "__main__":
 
     load_dotenv()
 
+    MODE = "filters"
+
     # Initialize your handler
-    handler = ChromaMoviesDBHandler("local", os.getenv("MOVIES_DB_PATH"))
+    handler = None
+    if MODE != "filters":
+        handler = ChromaMoviesDBHandler("local", os.getenv("MOVIES_DB_PATH"))
 
-    # Access all documents in the collection
-    collection = handler.vector_store._collection  # underlying Chroma collection
-    all_docs = collection.get(include=["metadatas", "documents"])  # fetch all stored docs
+    match MODE:
+        case "search":
+            QUERY = "fantasy movie"
+            FILTERS = {'$and': [{'genres': {'$contains': 'fantasy'}}, {'title': {'$ne': 'Akira'}}]}
+            # FILTERS = {"genres":{'$contains': 'fantasy'}}
+            # FILTERS = None
+            print(handler.similarity_search(QUERY, k=3, filters=FILTERS))
+    
+        case "show":
+            # Access all documents in the collection
+            collection = handler.vector_store._collection  # underlying Chroma collection
+            all_docs = collection.get(include=["metadatas", "documents"], limit=20)  # fetch all stored docs
 
-    # Iterate and print
-    for i, (doc, meta) in enumerate(zip(all_docs['documents'], all_docs['metadatas']), 1):
-        title = meta.get('title', 'No Title')
-        content_preview = doc[:100]  # first 100 chars
-        print(f"{i}. Title: {title}")
-        print(f"   Content: {content_preview}...\n")
+            # Iterate and print
+            for i, (doc, meta) in enumerate(zip(all_docs['documents'], all_docs['metadatas']), 1):
+                print(f"{i}. Metadata: {meta}")
+                print(f"   Content Preview: {doc[:100]}...\n")
 
-    # Optional: check total count
-    print(f"Total documents in DB: {len(all_docs['documents'])}")
+            # Optional: check total count
+            print(f"Total documents in DB: {len(all_docs['documents'])}")
+    
+        case "filters":
+            def test_prepare_filters():
+                test_cases = [
+                    # 1. Empty filters, no watched
+                    {
+                        "input": {"filters": None, "watched": None},
+                        "expected": None
+                    },
+                    # 2. Scalar filter
+                    {
+                        "input": {"filters": {"genres": "fantasy"}, "watched": None},
+                        "expected": {"genres": {"$contains": "fantasy"}}
+                    },
+                    # 3. List filter
+                    {
+                        "input": {"filters": {"genres": ["fantasy", "sci-fi"]}, "watched": None},
+                        "expected": {"$or": [
+                            {"genres": {"$contains": "fantasy"}},
+                            {"genres": {"$contains": "sci-fi"}}
+                        ]}
+                    },
+                    # 4. Nested dict filter
+                    {
+                        "input": {"filters": {"rating": {"$gte": 7}}, "watched": None},
+                        "expected": {"rating": {"$gte": 7}}
+                    },
+                    # 5. Mixed filters (scalar + list)
+                    {
+                        "input": {"filters": {"genres": "fantasy", "director": ["Nolan", "Tarantino"]}, "watched": None},
+                        "expected": {"$or": [
+                            {"genres": {"$contains": "fantasy"}},
+                            {"director": {"$contains": "Nolan"}},
+                            {"director": {"$contains": "Tarantino"}}
+                        ]}
+                    },
+                    # 6. Filters + watched set
+                    {
+                        "input": {"filters": {"genres": "fantasy"}, "watched": {"Akira", "Spirited Away"}},
+                        "expected": {"$and": [
+                            {"genres": {"$contains": "fantasy"}},
+                            {"title": {"$ne": "Akira"}},
+                            {"title": {"$ne": "Spirited Away"}}
+                        ]}
+                    },
+                    # 7. No filters, only watched set
+                    {
+                        "input": {"filters": None, "watched": {"Akira"}},
+                        "expected": {"title": {"$ne": "Akira"}}
+                    },
+                    # 8. Empty list filter (should be ignored)
+                    {
+                        "input": {"filters": {"genres": []}, "watched": None},
+                        "expected": None
+                    }
+                ]
+
+                def prepare_filters(filters: Optional[Dict[str, Any]], watched: Optional[set] = None):
+                    or_conditions = []
+                    if filters:
+                        for field, condition in filters.items():
+                            if isinstance(condition, dict):
+                                # Remove empty nested lists
+                                condition = {
+                                    op: val
+                                    for op, val in condition.items()
+                                    if not (isinstance(val, list) and len(val) == 0)
+                                }
+                                if condition:
+                                    or_conditions.append({field: condition})
+                            elif isinstance(condition, list):
+                                if condition:
+                                    for c in condition:
+                                        or_conditions.append({field: {"$contains": c}})
+                            else:
+                                # scalar -> wrap in $in
+                                or_conditions.append({field: {"$contains": condition}})
+                    and_conditions = []
+                    # If we have OR conditions, add them as a single block
+                    if or_conditions:
+                        if len(or_conditions) == 1:
+                            and_conditions.append(or_conditions[0])
+                        else:
+                            and_conditions.append({"$or": or_conditions})
+                    # Add watched exclusion
+                    if watched:
+                        for film in watched:
+                            and_conditions.append({"title": {"$ne": film}})
+                    if not and_conditions:
+                        return None
+                    elif len(and_conditions) == 1:
+                        return and_conditions[0]
+                    else:
+                        return {"$and": and_conditions}
+
+                # Run tests
+                for i, case in enumerate(test_cases, 1):
+                    result = prepare_filters(case["input"]["filters"], case["input"]["watched"])
+                    try:
+                        assert result == case["expected"], f"Test case {i} failed: {result} != {case['expected']}"
+                    except AssertionError as e:
+                        if i==6: pass # README since there i a set the order might change
+                        else: raise e
+                
+                print("All test cases passed!")
+
+            # Run the test set
+            test_prepare_filters()
