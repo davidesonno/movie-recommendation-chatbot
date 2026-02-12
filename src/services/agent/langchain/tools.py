@@ -82,9 +82,7 @@ movie_vectorstore = get_movies_db_handler(
     "recommend_movies",
     description=(
         "Retrieve movies with query:str and OPTIONAL filters:dict. The filters are in OR. "
-        "Do not query 'films like [x]', 'action'. "
-        "Query using topics not genres or titles. "
-        "ONLY use the filters if user asked for them. "
+        "Query using users messages. "
         "Available filters are genres (string), director (string), year (int or range), themes (string), title (string or {'$nin': [...]}) for exclusion. "
     ).strip()
 )
@@ -138,7 +136,7 @@ def recomend_movies(query: str, filters: Optional[Dict[str, Any]] = None, runtim
             return {"$and": and_conditions}
 
 
-    DB_RETRIEVE_AMOUNT = 30    
+    DB_RETRIEVE_AMOUNT = 30
     TOOL_RETURN_AMOUNT = 3
 
     store = runtime.store
@@ -148,11 +146,22 @@ def recomend_movies(query: str, filters: Optional[Dict[str, Any]] = None, runtim
     watched = set(preferences.get("watched_films", []))
     interested = set(preferences.get("interested_films", []))
 
+    # check the query, because the agent might search for "fantasy films" and so on but that info is in the genre
+    if len(query.split()) <= 5: # 5 = "short phrase"
+        genres = filters.get("genres", "")
+        if isinstance(genres, str):
+            genres = [genres]
+        for genre in genres:
+            if genre.lower() in query.lower():
+                # query = query.replace(genre, "").strip() # remove genre from query. If we are here the query is likely: "fantasy films" and so on, so "films" alone is useless
+                query = "" # empty the whole query
+
     # sanitize agent filters and add watched films
-    filters = prepare_filters(filters, watched)
+    prepared_filters = prepare_filters(filters, watched)
 
     # retrieve filtered candidates from vector store
-    docs = movie_vectorstore.similarity_search(query, k=DB_RETRIEVE_AMOUNT, filters=filters)
+    print(f"Querying movie vectorstore with query: '{query}' and filters: {prepared_filters}")
+    docs = movie_vectorstore.similarity_search(query, k=DB_RETRIEVE_AMOUNT, filters=prepared_filters)
 
     candidates = []
     

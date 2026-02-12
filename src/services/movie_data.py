@@ -27,6 +27,30 @@ def main():
             movies = fetch_tmdb_data(movie_data_source_base_url, movie_data_source_api_key, movie_amount)
             print(f"Successfully fetched {len(movies)} movies.")
         case _:
+            # README if you are implementing a new source, be sure that the output matches this structure:
+    #     {
+    #     "page_content": "John Wick (2014) is a Action, Thriller film directed by Chad Stahelski. Themes include hitman, bratva (russian mafia), gangster, secret organization, revenge, murder, dog, retired, widower. Ex-hitman John Wick comes out of retirement to track down the gangsters that took everything from him.",
+    #     "metadata": {
+    #         "title": "John Wick",
+    #         "genres": [
+    #             "action",     <---- NON CAPITALIZED
+    #             "thriller"    <---- NON CAPITALIZED
+    #         ],
+    #         "director": "Chad Stahelski",
+    #         "year": 2014,
+    #         "themes": [
+    #             "hitman",
+    #             "bratva (russian mafia)",
+    #             "gangster",
+    #             "secret organization",
+    #             "revenge",
+    #             "murder",
+    #             "dog",
+    #             "retired",
+    #             "widower"
+    #         ]
+    #     }
+    # },
             raise RuntimeError(f"Unsupported movie data source: {movie_data_source}")
 
     print(f"Saving movies to {movie_data_output_path}...")
@@ -118,7 +142,7 @@ def enrich_movie(base_url: str, headers: dict, tmdb_id: int):
     # 3) Keywords (themes)
     keywords_resp = requests.get(f"{base_url}/movie/{tmdb_id}/keywords", headers=headers)
     keywords_data = keywords_resp.json() if keywords_resp.status_code == 200 else {}
-    themes = [k["name"] for k in keywords_data.get("keywords", [])]
+    themes = [k["name"].lower() for k in keywords_data.get("keywords", [])]
 
     # 4) Build page_content
     parts = []

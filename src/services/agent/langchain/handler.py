@@ -109,7 +109,7 @@ class LangChainAgentHandler(AgentHandler):
                 tool_output_summary = "\n".join([f"{i+1}. {to['tool_name']}: {to['content']}" for i, to in enumerate(prev_tool_outputs)])
                 history.append({"role": "system", "content": f"Previous tool calls in this conversation:\n{tool_output_summary}"})
             
-            # print("Invoking agent with history:", history)
+            print("Invoking agent with history:", history)
             agent_response = self.agent.invoke(
                 {"messages": history},
                 context=UserContext(user_id=user_id),
