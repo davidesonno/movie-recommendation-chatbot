@@ -43,33 +43,35 @@ Respond with ONLY "MALICIOUS" or "SAFE" (no explanations)."""
 
 
 class GreetingMiddleware(AgentMiddleware):
-    """Intercepts greetings and responds with friendly greetings."""
+    """Intercepts greetings and thank-yous and responds appropriately."""
 
     def __init__(self, llm: ChatOpenAI):
         self.greeting_llm = llm
         self.greeting_prompt = ChatPromptTemplate.from_template(
-            """Determine if this user input is only a greeting (hello, hi, hey, good morning, etc.) or thanking you(thank you, ty, etc), and is not asking anything else.
+            """Decide whether the user's input is a simple greeting, a simple thank-you, or something else.
 User input: {input}
 
-Respond with ONLY "GREETING" or "NOT_GREETING" (no explanations)."""
+Respond with ONLY one token: GREETING, THANK_YOU, or OTHER (no explanations)."""
         )
+        # keep the same chaining approach you used
         self.chain = self.greeting_prompt | self.greeting_llm
 
     @hook_config(can_jump_to=["end"])
     def before_agent(self, state: AgentState, runtime: Runtime) -> Dict[str, Any] | None:
         if not state.get("messages"):
             return None
-        
-        last_msg = state["messages"][-1]
-        if not hasattr(last_msg, 'content') or not last_msg.content:
-            return None
-        
-        # Check if it's a greeting
-        result = self.chain.invoke({"input": last_msg.content})
-        
-        label = result.content.strip().upper()
 
-        if label == "GREETING":
+        last_msg = state["messages"][-1]
+        if not hasattr(last_msg, "content") or not last_msg.content:
+            return None
+
+        try:
+            result = self.chain.invoke({"input": last_msg.content})
+            label = (result.content or "").strip().upper().replace(" ", "_")
+        except Exception:
+            return None
+
+        if "GREETING" in label:
             greeting_response = (
                 "Hello! 👋 I'm your movie recommendation assistant. "
                 "What kind of movies are you interested in today? "
@@ -80,8 +82,17 @@ Respond with ONLY "GREETING" or "NOT_GREETING" (no explanations)."""
                 "jump_to": "end"
             }
 
-        return None
+        if "THANK" in label:
+            thank_you_response = (
+                "You're welcome! 😊 If you need anything else — more recommendations, filters, "
+                "or help with something specific — just let me know."
+            )
+            return {
+                "messages": [AIMessage(content=thank_you_response)],
+                "jump_to": "end"
+            }
 
+        return None
 
 from langchain.tools.tool_node import ToolCallRequest
 

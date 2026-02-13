@@ -2,6 +2,8 @@
 
 A local AI-powered movie recommendation system with multi-service architecture. Users can chat with an intelligent assistant to get movie recommendations based on mood, genre, and preferences.
 
+![Demo of the app](./assets/demo.gif)
+
 ## Quick Start
 
 ### Prerequisites

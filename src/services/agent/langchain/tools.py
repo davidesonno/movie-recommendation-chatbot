@@ -151,6 +151,7 @@ def recomend_movies(query: str, filters: Optional[Dict[str, Any]] = None, runtim
     #             query = "" # empty the whole query
 
     # sanitize agent filters and add watched films
+    # TODO: do we always add disliked genres?
     prepared_filters = prepare_filters(filters, watched)
 
     # retrieve filtered candidates from vector store
@@ -198,10 +199,10 @@ def recomend_movies(query: str, filters: Optional[Dict[str, Any]] = None, runtim
     ).strip()
 )
 def brave_search_tool(query: str, k: int = 3) -> str:
-    print(f"Executing brave_search_tool with query: {query}")
+    # print(f"Executing brave_search_tool with query: {query}")
     api_key = os.getenv("BRAVE_SEARCH_API_KEY")
     tool = BraveSearch.from_api_key(api_key=api_key)
     result = tool.run(query)
-    print(f"Found {len(result)} search results, keeping top {k}.")
+    # print(f"Found {len(result)} search results, keeping top {k}.")
     # print(f"Search result: {result}")
     return ". ".join([r["snippet"] for r in result[:k]])

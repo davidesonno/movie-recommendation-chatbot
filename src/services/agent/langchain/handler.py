@@ -120,8 +120,8 @@ class LangChainAgentHandler(AgentHandler):
             # print("Agent response:", agent_response)
 
             response_messages = agent_response.get("messages", [])
-            last_message = response_messages[-1] if response_messages else {}
-            last_message_content = last_message.content
+            # last_message = response_messages[-1] if response_messages else {}
+            # last_message_content = last_message.content
             # print("Last message content:", last_message_content)
 
             last_message_content = None

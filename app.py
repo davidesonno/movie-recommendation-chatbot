@@ -21,8 +21,9 @@ def main():
         backend_thread.start()
         
         # Wait for backend to be ready with a timeout
-        if not ready_event.wait(timeout=30):
-            print("ERROR: Backend failed to initialize within 30 seconds", file=sys.stderr)
+        t=60
+        if not ready_event.wait(timeout=t):
+            print(f"ERROR: Backend failed to initialize within {t} seconds", file=sys.stderr)
             print("Check the error messages above for details.", file=sys.stderr)
             return
         
