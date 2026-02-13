@@ -157,6 +157,7 @@ def recomend_movies(query: str, filters: Optional[Dict[str, Any]] = None, runtim
     # retrieve filtered candidates from vector store
     print(f"Querying movie vectorstore with query: '{query}' and filters: {prepared_filters}")
     docs = movie_vectorstore.similarity_search(query, k=DB_RETRIEVE_AMOUNT, filters=prepared_filters)
+    # TODO: also return/use similarity score and use it in the ranking. For now we rely on the filters and the LLM to do the ranking, but it would be better to have a more deterministic relevance score based on similarity + metadata matching.
 
     candidates = []
     
